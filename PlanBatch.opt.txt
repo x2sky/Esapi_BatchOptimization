@@ -1,4 +1,0 @@
-patient id;course id;plan id;N. runs
-xxx; xxx; xxx; 2
-xxx; xxx; xxx; 1
-yyy; yyy; yyy; 1

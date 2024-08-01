@@ -1,0 +1,21 @@
+IMRT_initialState
+0 RestartOptimization - Remove the existing optimal fluences from beams before optimization.
+1 ContinueOptimization - Use existing optimal fluences as a starting point of optimization.
+2 ContinueOptimizationWithPlanDoseAsIntermediateDose - If the plan dose is valid, it is used as an intermediate dose for optimization.
+
+IMRT_convergenceOption
+0 NoEarlyTermination - Always perform the specified number of iterations.
+1 TerminateIfConverged - Terminate optimization before the maximum number of iterations is reached if the optimization is already converged.
+
+IMRT_intermediateDoseOption
+0 NoIntermediateDose - No intermediate dose for optimization.
+1 UseIntermediateDose - Use an intermediate dose in optimization.
+
+VMAT_initialState
+0 RestartOptimization - Remove the existing optimal fluences from beams before optimization.
+1 ContinueOptimization - Use existing optimal fluences as a starting point of optimization.
+2 ContinueOptimizationWithPlanDoseAsIntermediateDose - If the plan dose is valid, it is used as an intermediate dose for optimization.
+
+VMAT_intermediateDoseOption
+0 NoIntermediateDose - No intermediate dose for optimization.  
+1 UseIntermediateDose - Use an intermediate dose in optimization.

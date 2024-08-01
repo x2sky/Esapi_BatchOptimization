@@ -6,30 +6,45 @@
         xmlns:local="clr-namespace:batchOptimization"
         mc:Ignorable="d"
         Title="Eclipse Batch Optimization"
-        ResizeMode="NoResize" Height="345" Width="620"
-        TextBlock.FontSize="13"
+        ResizeMode="CanMinimize"
+        FontSize="13"
+        FontFamily="Arial"
+        SizeToContent="WidthAndHeight"
         Closing="CloseWindow">
-    <Grid>
+    <Grid Height="380" Width="600">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
-        <Label Grid.Column="0" Content="History log:" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Top"/>
-        <Border Grid.Column="0" BorderBrush="Gray" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,25,0,0" Height="220" Width="375">
+        <Label Grid.Column="0" Content="Plans to Optimize" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Top"/>
+        <Border Grid.Column="0" BorderBrush="Gray" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,25,0,0" Height="200" Width="400">
+            <DataGrid x:Name="dataGridPlns" AutoGenerateColumns="False" CanUserAddRows="False" CanUserSortColumns="False">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Patient Id" Binding="{Binding Pat}" Width="*"/>
+                    <DataGridTextColumn Header="Course Id" Binding="{Binding Crs}" Width="*"/>
+                    <DataGridTextColumn Header="Plan Id" Binding="{Binding Pln}" Width="*"/>
+                    <DataGridTextColumn Header="Iterations" Binding="{Binding Iter}" Width="68"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding Stat}" Width="48" IsReadOnly="True"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+        <Button Grid.Column="1" Name="btnAddPln" Content="Add Plan" ToolTip="Add a plan row." HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,25,0,0" Width="100" Height="30" Click="btnAddPln_Click"/>
+        <Button Grid.Column="1" Name="btnRmvPln" Content="Remove Plan" ToolTip="Remove the selected plan row." HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,60,0,0" Width="100" Height="30" Click="btnRmvPln_Click"/>
+        <Button Grid.Column="1" Name="btnChckPln" Content="Check Plans" ToolTip="Simple plan check for optimization." HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,95,0,0" Width="100" Height="30" Click="btnChckPln_Click"/>
+        <Label Grid.Column="1" Content="Dose Calc Only" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="38,175,0,0"/>
+        <CheckBox Grid.Column="1" Name="chkBxDoseCalcOnly" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="143,180,0,0"/>
+        <Button Grid.Column="1" Name="btnRunOpt" Background="GreenYellow"  Content="Run Optimizations" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,200,0,0" Width="120" Height="35" Click="btnRunOpt_Click"/>
+        <Label Grid.Row="1" Content="Optimization Log" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Top"/>
+        <Border Grid.Row="1" Grid.ColumnSpan="2" BorderBrush="Gray" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,25,0,0" Height="90" Width="580">
             <ListView Name="lstvHst" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.CanContentScroll="False"/>
         </Border>
-        <Button Grid.Column="0" Name="btnClrHist" Content="Clear History" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,250,20,0" Width="82" Height="25" Click="btnClrHist_Click"/>
-        <Label Grid.Column="1" Content="Pending plans:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,2,0,0"/>
-        <Border Grid.Column="1" BorderBrush="Gray" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,25,0,0" Height="120" Width="200">
-            <ListView Name="lstvPlns" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.CanContentScroll="False"/>
-        </Border>
-        <Button Grid.Column="1" Name="btnLoadPln" Content="Load Batch File" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,150,0,0" Width="95" Height="30" Click="btnLoadPln_Click"/>
-        <Button Grid.Column="1" Name="btnChckPln" Content="Check Plans" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="115,150,0,0" Width="95" Height="30" Click="btnChckPln_Click"/>
-        <Label Grid.Column="1" Content="Dose Calc Only" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="100,185,0,0"/>
-        <CheckBox Grid.Column="1" Name="chkBxDoseCalcOnly" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="195,192,0,0"/>
-        <Button Grid.Column="1" Name="btnRunOpt" Background="GreenYellow"  Content="Run Optimizations" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="90,210,0,0" Width="120" Height="35" Click="btnRunOpt_Click"/>
-        <DockPanel VerticalAlignment="Bottom" Grid.ColumnSpan="2">
-            <StatusBar DockPanel.Dock="Bottom" Height="24">
+        <DockPanel Grid.Row ="2" Grid.ColumnSpan="2" VerticalAlignment="Bottom">
+            <StatusBar DockPanel.Dock="Bottom" Height="Auto" Width="Auto" FontSize="12" FontFamily="Lucida Sans">
                 <TextBlock Name="txtbStat" Text="Ready."/>
             </StatusBar>
         </DockPanel>

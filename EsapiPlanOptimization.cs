@@ -10,6 +10,8 @@
 ///     getBeamTechnique - get the beam technique (from the first non-setup beam)
 ///     LoadParameters - load parameters from config file
 ///
+///--version 2.0.0.1
+///Becket Hui 2024/7
 ///--version 1.0.1.1
 ///Becket Hui 2022/9
 ///
@@ -21,6 +23,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using VMS.TPS.Common.Model.API;
@@ -43,17 +46,17 @@ namespace batchOptimization
         private OptimizationIntermediateDoseOption IMRT_intDsOpt = OptimizationIntermediateDoseOption.UseIntermediateDose;
         private OptimizationIntermediateDoseOption VMAT_intDsOpt = OptimizationIntermediateDoseOption.UseIntermediateDose;
 
-        public Task ConnectApp()
+        public RunTask ConnectApp()
         // Connect to Aria
         {
             try
             {
                 EsapiApp = VMS.TPS.Common.Model.API.Application.CreateApplication();
-                return new Task(true, "Aria connection successful.");
+                return new RunTask(true, "Aria connection successful.");
             }
             catch
             {
-                return new Task(false, "Aria connection failed.");
+                return new RunTask(false, "Aria connection failed.");
             }
         }
         public string GetUserId()
@@ -63,11 +66,11 @@ namespace batchOptimization
             int pos = usrId.LastIndexOf("\\") + 1;
             return usrId.Substring(pos, usrId.Length-pos);
         }
-        public Task CheckPlan(ExtPlan pln)
+        public RunTask CheckPlan(ExtPlan pln)
         // Check the optimization status of the selected plan
         {
             ptSumm = EsapiApp.PatientSummaries.FirstOrDefault(ps => ps.Id == pln.PatientId);
-            if (ptSumm == null) return new Task(false, "Patient " + pln.PatientId + " cannot be found.");
+            if (ptSumm == null) return new RunTask(false, "patient " + pln.PatientId + " cannot be found.");
             try
             {
                 pt = EsapiApp.OpenPatient(ptSumm);
@@ -75,25 +78,26 @@ namespace batchOptimization
             }
             catch (Exception ex)
             {
+                //MessageBox.Show(ex.ToString());
                 EsapiApp.ClosePatient();
-                return new Task(false, "Cannot modify patient " + pln.PatientId + ", make sure patient is closed.");
+                return new RunTask(false, "cannot modify patient " + pln.PatientId + ", make sure patient is closed.");
             }
             crs = pt.Courses.FirstOrDefault(c => c.Id == pln.CourseId);
             if (crs == null)
             {
                 EsapiApp.ClosePatient();
-                return new Task(false, "Course " + pln.CourseId + " cannot be found.");
+                return new RunTask(false, "course " + pln.CourseId + " cannot be found.");
             }
             plnStup = crs.ExternalPlanSetups.FirstOrDefault(p => p.Id == pln.PlanId);
             if (plnStup == null)
             {
                 EsapiApp.ClosePatient();
-                return new Task(false, "Plan " + pln.PlanId + " cannot be found.");
+                return new RunTask(false, "plan " + pln.PlanId + " cannot be found.");
             }
             if (plnStup.ApprovalStatus != PlanSetupApprovalStatus.UnApproved)
             {
                 EsapiApp.ClosePatient();
-                return new Task(false, "Plan " + pln.PlanId + " is not in unapproved status.");
+                return new RunTask(false, "plan " + pln.PlanId + " is not in unapproved status.");
             }
             try
             {
@@ -104,20 +108,20 @@ namespace batchOptimization
                     if (obj1 != null)
                     {
                         EsapiApp.ClosePatient();
-                        return new Task(true, "Plan " + pln.PlanId + " is ready for optimization.");
+                        return new RunTask(true, "plan " + pln.PlanId + " is ready for optimization.");
                     }
                 }
                 EsapiApp.ClosePatient();
-                return new Task(false, "No objective in plan " + pln.PlanId + ".");
+                return new RunTask(false, "no objective in plan " + pln.PlanId + ".");
             }
             catch (Exception ex)
             {
-                // MessageBox.Show(ex.ToString());
+                //MessageBox.Show(ex.ToString());
                 EsapiApp.ClosePatient();
-                return new Task(false, "Something is wrong with plan " + pln.PlanId + ".");
+                return new RunTask(false, "something is wrong with plan " + pln.PlanId + ".");
             }
         }
-        public Task Optimize(ExtPlan pln, int idxOptRun)
+        public RunTask Optimize(ExtPlan pln, int idxOptRun)
         // Plan optimization
         {
             try
@@ -153,12 +157,12 @@ namespace batchOptimization
                         CalculationResult calcRes = plnStup.CalculateLeafMotions();  // compute leaf sequence
                         EsapiApp.SaveModifications();
                         EsapiApp.ClosePatient();
-                        return new Task(true, "Plan \"" + pln.PlanId + "\" completed optimization run no." + idxOptRun.ToString() + ".");
+                        return new RunTask(true, "Plan \"" + pln.PlanId + "\" completed optimization run no." + idxOptRun.ToString() + ".");
                     }
                     else
                     {
                         EsapiApp.ClosePatient();
-                        return new Task(false, "Fail to optimize plan \"" + pln.PlanId + "\" during run no." + idxOptRun.ToString() + ".");
+                        return new RunTask(false, "Fail to optimize plan \"" + pln.PlanId + "\" during run no." + idxOptRun.ToString() + ".");
                     }
                 }
                 else if (plnTech == "VMAT")
@@ -183,29 +187,28 @@ namespace batchOptimization
                     {
                         EsapiApp.SaveModifications();
                         EsapiApp.ClosePatient();
-                        return new Task(true, "Plan \"" + pln.PlanId + "\" completed optimization run no." + idxOptRun.ToString() + ".");
+                        return new RunTask(true, "Plan \"" + pln.PlanId + "\" completed optimization run no." + idxOptRun.ToString() + ".");
                     }
                     else
                     {
                         EsapiApp.ClosePatient();
-                        return new Task(false, "Fail to optimize plan \"" + pln.PlanId + "\" during run no." + idxOptRun.ToString() + ".");
+                        return new RunTask(false, "Fail to optimize plan \"" + pln.PlanId + "\" during run no." + idxOptRun.ToString() + ".");
                     }
                 }
                 else  // null
                 {
                     EsapiApp.ClosePatient();
-                    return new Task(false, "Cannot optimize \"" + pln.PlanId + "\", it is neither IMRT nor VMAT.");
+                    return new RunTask(false, "Cannot optimize \"" + pln.PlanId + "\", it is neither IMRT nor VMAT.");
                 }
             }
             catch (Exception ex)
             {
-                // MessageBox.Show(ex.ToString());
+                MessageBox.Show(ex.ToString());
                 if (pt != null) EsapiApp.ClosePatient();
-                return new Task(false, "Fail to optimize plan \"" + pln.PlanId + "\".");
+                return new RunTask(false, "Fail to optimize plan \"" + pln.PlanId + "\".\n" + ex.ToString());
             }
-
         }
-        public Task ComputeDose(ExtPlan pln)
+        public RunTask ComputeDose(ExtPlan pln)
         // Dose Calculation
         {
             try
@@ -216,16 +219,25 @@ namespace batchOptimization
                 crs = pt.Courses.FirstOrDefault(c => c.Id == pln.CourseId);
                 plnStup = crs.ExternalPlanSetups.FirstOrDefault(p => p.Id == pln.PlanId);
                 CalculationResult calcRes = plnStup.CalculateDose();
-                // MessageBox.Show("Dose calc success is " + calcRes.Success.ToString());
-                EsapiApp.SaveModifications();
-                EsapiApp.ClosePatient();
-                return new Task(true, "Plan \"" + pln.PlanId + "\" dose computation completed.");
+                if (calcRes.Success)
+                {
+                    // MessageBox.Show("Dose calc success is " + calcRes.Success.ToString());
+                    EsapiApp.SaveModifications();
+                    EsapiApp.ClosePatient();
+                    return new RunTask(true, "Plan \"" + pln.PlanId + "\" dose computation completed.");
+                }
+                else
+                {
+                    EsapiApp.ClosePatient();
+                    return new RunTask(false, "Failed to compute dose for plan \"" + pln.PlanId + "\".");
+                }
+                
             }
             catch (Exception ex)
             {
                 // MessageBox.Show(ex.ToString());
                 if (pt != null) EsapiApp.ClosePatient();
-                return new Task(false, "Fail to compute dose in plan \"" + pln.PlanId + "\".");
+                return new RunTask(false, "Fail to compute dose in plan \"" + pln.PlanId + "\".\n" + ex.ToString());
             }
         }
         public void Exit()
@@ -250,7 +262,7 @@ namespace batchOptimization
                 return null;
             }
         }
-        public Task LoadParameters(string filePath)
+        public RunTask LoadParameters(string filePath)
         // Read config file to obtain parameters
         {
             try
@@ -288,12 +300,12 @@ namespace batchOptimization
                         }
                     }
                 }
-                return new Task(true, "Config file loaded.");
+                return new RunTask(true, "Config file loaded.");
             }
             catch (Exception ex)
             {
                 //MessageBox.Show(ex.Message);
-                return new Task(false, "Error loading config file, some default parameter values may be used.");
+                return new RunTask(false, "Error loading config file, some default parameter values may be used.");
             }
         }
     }

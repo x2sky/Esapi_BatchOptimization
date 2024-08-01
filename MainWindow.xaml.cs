@@ -1,14 +1,15 @@
 ﻿//////////////////////////////////////////////////////////////////////
 ///Main window widget for batchOptimization script//
 /// Include functions:
-///     btnLoadPln_Click - routine to load plans from a .opt file
+///     btnAddPln_Click - routine to add a plan row to the plan list
+///     btnRmvPln_Click - routine to remove a plan row
 ///     btnChckPln_Click - routine to check loaded plans for their status
 ///     btnRunOpt_Click - routine to run plan optimization and dose calculation
-///     btnClrHist_Click - clear history view
 ///     CloseWindow - close the main window
 ///     ShowMessage - show message on history history and status bar
-///     UpdatePlanLsView - show pending plans in the list view
-/// 
+///
+///--version 2.0.0.1
+///Becket Hui 2024/7
 ///--version 1.0.1.1
 ///Becket Hui 2022/9
 ///
@@ -16,6 +17,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -29,7 +31,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using VMS.TPS.Common.Model.API;
 
-[assembly: AssemblyVersion("1.0.1.1")]
+[assembly: AssemblyVersion("2.0.0.1")]
 [assembly: AssemblyFileVersion("0.0.0.0")]
 [assembly: AssemblyInformationalVersion("1.0")]
 
@@ -43,16 +45,14 @@ namespace batchOptimization
     public partial class MainWindow : Window
     {
         private EsapiPlanOptimization plnOpt = new EsapiPlanOptimization();
-        private PlanBatch plnLs;
         private LogFile logger = new LogFile();
-        private Task tsk;
-        private Task tsk2;
+        private RunTask tsk;
+        private RunTask tsk2;
         private CloseWindow closeWarning = new CloseWindow();
         private bool connection = false;
-        private bool planLoad = false;
         private bool dsCalcOnly = false;
         public MainWindow()
-        // initialize window and connect to Aria
+        // Initialize window and connect to Aria
         {
             InitializeComponent();
             // Connect to Aria
@@ -68,171 +68,260 @@ namespace batchOptimization
                 // load config file
                 tsk2 = plnOpt.LoadParameters(Path.Combine(fileDir, "BatchOptimization.cfg"));
                 if (tsk2.success == false) ShowMessage(tsk2.message);
-                txtbStat.Text = "Ready to load batch file.";
+                dataGridPlns.ItemsSource = new ObservableCollection<PlanInput>
+                {
+                    new PlanInput()
+                };
+                txtbStat.Text = "Ready.";
                 connection = true;
             }
             else
             {
                 ShowMessage(tsk.message, Colors.Red);
+                txtbStat.Text = "Failed to connect to Aria.";
                 connection = false;
             }
         }
-        private void btnLoadPln_Click(object sender, RoutedEventArgs e)
-        // Read file that contains plans for optimization 
+        private void btnAddPln_Click(object sender, RoutedEventArgs e)
+        // Add a new plan row to dataGridPlns
         {
-            //Open file dialog box to select file//
-            var infile = new OpenFileDialog
+            PlanInput selPln = (PlanInput)dataGridPlns.SelectedItem;
+            ObservableCollection<PlanInput> dataGridColl;
+            if (dataGridPlns.ItemsSource == null)
             {
-                Multiselect = false,
-                Title = "Choose batch optimization plan file",
-                Filter = "Text Documents|*.txt"
-            };
-            if (infile.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            {
-                lstvPlns.Items.Clear();
-                // Read the plan names from file
-                plnLs = new PlanBatch();
-                tsk = plnLs.LoadFile(infile.FileName);
-                // Update windows
-                if (tsk.success)
+                // If dataGridPlns is not bind to any collection, add a new collection
+                dataGridColl = new ObservableCollection<PlanInput>
                 {
-                    UpdatePlanLsView();
-                    ShowMessage(tsk.message);
-                    planLoad = true;
-                }
-                else
-                {
-                    ShowMessage(tsk.message, Colors.Red);
-                    planLoad= false;
-                }
+                    new PlanInput()
+                };
             }
             else
             {
-                txtbStat.Text = "No file selected.";
+                dataGridColl = (ObservableCollection<PlanInput>)dataGridPlns.ItemsSource;
+
+                if (selPln != null)
+                {
+                    // If row selected, copy the selected row
+                    PlanInput newPln = new PlanInput
+                    {
+                        Pat = selPln.Pat,
+                        Crs = selPln.Crs,
+                        Pln = selPln.Pln,
+                        Iter = selPln.Iter,
+                        Stat = "⨁"
+                    };
+                    // Add the copied plan to collection
+                    dataGridColl.Add(newPln);
+                }
+                else
+                {
+                    // If no row selected, add a new blank row to collection
+                    dataGridColl.Add(new PlanInput());
+                }
+            }
+            dataGridPlns.ItemsSource = dataGridColl;
+        }
+        private void btnRmvPln_Click(object sender, RoutedEventArgs e)
+        // Remove the selected plan row
+        {
+            if (dataGridPlns.SelectedItem != null)
+            {
+                ObservableCollection<PlanInput> dataGridColl = (ObservableCollection<PlanInput>)dataGridPlns.ItemsSource;
+                dataGridColl.Remove((PlanInput)dataGridPlns.SelectedItem);
             }
         }
         private void btnChckPln_Click(object sender, RoutedEventArgs e)
         // Check validity of plans //
         {
-            if (connection && planLoad)
+            if (connection)
             {
-                foreach (ExtPlan pln in plnLs.PlanProperties)
+                int plnCnt = dataGridPlns.Items.Count;
+                int rowNumber = 0;
+                if (plnCnt == 0)
                 {
-                    tsk = plnOpt.CheckPlan(pln);
-                    if (tsk.success)
+                    txtbStat.Text = "No plan added to list.";
+                }
+                else
+                {
+                    if (dataGridPlns.ItemsSource == null)
                     {
-                        ShowMessage(tsk.message);
+                        txtbStat.Text = "No plan added to list.";
                     }
                     else
                     {
-                        ShowMessage(tsk.message, Colors.Red);
+                        ObservableCollection<PlanInput> dataGridColl = (ObservableCollection<PlanInput>)dataGridPlns.ItemsSource;
+                        ShowMessage("Checking " + plnCnt + " plans.");
+                        txtbStat.Text = "Checking plans.";
+                        foreach (PlanInput inPln in dataGridColl)
+                        {
+                            rowNumber++;
+                            if (inPln != null)
+                            {
+                                try
+                                {
+                                    ExtPlan extPln = new ExtPlan(inPln);
+                                    tsk = plnOpt.CheckPlan(extPln);
+                                    if (tsk.success)
+                                    {
+                                        ShowMessage("For row " + rowNumber + ", " + tsk.message);
+                                        inPln.Stat = "⨁";
+                                    }
+                                    else
+                                    {
+                                        ShowMessage("For row " + rowNumber + ", " + tsk.message, Colors.Red);
+                                        inPln.Stat = "✕";
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    ShowMessage("For row " + rowNumber + ", input is invalid.", Colors.Red);
+                                    inPln.Stat = "✕";
+                                }
+                            }
+                        }
+                        dataGridPlns.Items.Refresh();
+                        txtbStat.Text = "Ready.";
                     }
                 }
-                txtbStat.Text = "Ready.";
-            }
-            else if (!connection)
-            {
-                txtbStat.Text = "Cannot connect to database.";
             }
             else
             {
-                txtbStat.Text = "No plan loaded.";
+                txtbStat.Text = "Cannot connect to database.";
             }
         }
         private void btnRunOpt_Click(object sender, RoutedEventArgs e)
         // Start batch optimizations on plans
         {
+            txtbStat.Text = "Running batch processing.";
             dsCalcOnly = chkBxDoseCalcOnly.IsChecked ?? false;
-            if (connection && planLoad)
+            // Disable all buttons
+            Dispatcher.Invoke(() =>
             {
-                // set thread to close warning window by Esapi //
+                dataGridPlns.IsReadOnly = true;
+                btnAddPln.IsEnabled = false;
+                btnRmvPln.IsEnabled = false;
+                btnChckPln.IsEnabled = false;
+                btnRunOpt.IsEnabled = false;
+                chkBxDoseCalcOnly.IsEnabled = false;
+            });
+            if (connection)
+            {
+                // Set thread to close warning window by Esapi
                 CancellationTokenSource cts = new CancellationTokenSource();
-                closeWarning.CloseWarningThread(cts.Token);
-                // create log file stream //
+                //closeWarning.CloseWarningThread(cts.Token);
+                Task closeWarningTask = closeWarning.CloseWarningThread(cts.Token);
+                closeWarningTask.ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
+                    {
+                        Exception ex = t.Exception;
+                        ShowMessage("Something wrong with routine to close pop-up windows.");
+                    }
+                });
+                // Create log file stream
                 logger.StartLog(plnOpt.GetUserId());
                 logger.WriteLog("Start batch processing.");
-                foreach (ExtPlan pln in plnLs.PlanProperties)
+                // Start looping through the input plans
+                ObservableCollection<PlanInput> dataGridColl = (ObservableCollection<PlanInput>)dataGridPlns.ItemsSource;
+                int rowNumber = 0;
+                foreach (PlanInput inPln in dataGridColl)
                 {
-                    if (dsCalcOnly)  // if dose calc only
+                    rowNumber++;
+                    if (inPln != null)
                     {
-                        ShowMessage("Computing dose in plan \"" + pln.PlanId + "\".");
-                        logger.WriteLog("For patient " + pln.PatientId + ", course " + pln.CourseId + ", plan " + pln.PlanId + ", start dose computation.");
-                        tsk = plnOpt.ComputeDose(pln);
-                        if (tsk.success)
+                        try
                         {
-                            ShowMessage(tsk.message);
-                            logger.WriteLog(tsk.message);
+                            ExtPlan extPln = new ExtPlan(inPln);
+                            if (dsCalcOnly)  // if dose calc only
+                            {
+                                ShowMessage("For row " + rowNumber + ", plan " + extPln.PlanId + ", computing dose.");
+                                logger.WriteLog("For patient " + extPln.PatientId + ", course " + extPln.CourseId + ", plan " + extPln.PlanId + ", start dose computation.");
+                                tsk = plnOpt.ComputeDose(extPln);
+                                if (tsk.success)
+                                {
+                                    ShowMessage(tsk.message);
+                                    logger.WriteLog(tsk.message);
+                                    inPln.Stat = "✓";
+                                }
+                                else
+                                {
+                                    ShowMessage(tsk.message, Colors.Red);
+                                    logger.WriteLog(tsk.message);
+                                    inPln.Stat = "✕";
+                                }
+                            }
+                            else  // if optimization
+                            {
+                                // First perform optimization
+                                ShowMessage("For row " + rowNumber + ", plan " + extPln.PlanId + ", start optimization.");
+                                logger.WriteLog("For patient " + extPln.PatientId + ", course " + extPln.CourseId + ", plan " + extPln.PlanId + ", start optimization.");
+                                for (int idxRun = 1; idxRun < extPln.N_Runs + 1; idxRun++)
+                                {
+                                    ShowMessage("Running optimization iteration no. " + idxRun.ToString() + ".");
+                                    logger.WriteLog("Start optimization run no." + idxRun.ToString() + " in plan \"" + extPln.PlanId + "\".");
+                                    tsk = plnOpt.Optimize(extPln, idxRun);
+                                    if (tsk.success)
+                                    // If optimization successful, perform dose calc
+                                    {
+                                        logger.WriteLog(tsk.message);
+                                        ShowMessage("Optimization iteration no." + idxRun.ToString() + " completed, computing dose.");
+                                        logger.WriteLog("Start dose computation in plan \"" + extPln.PlanId + "\".");
+                                        tsk2 = plnOpt.ComputeDose(extPln);
+                                        if (tsk2.success)
+                                        {
+                                            ShowMessage(tsk2.message);
+                                            logger.WriteLog(tsk2.message);
+                                            inPln.Stat = "✓";
+                                        }
+                                        else
+                                        {
+                                            ShowMessage(tsk2.message, Colors.Red);
+                                            logger.WriteLog(tsk2.message);
+                                            inPln.Stat = "✕";
+                                            break;  // exit "number of iterations" for loop
+                                        }
+                                    }
+                                    else
+                                    {
+                                        ShowMessage(tsk.message, Colors.Red);
+                                        logger.WriteLog(tsk.message);
+                                        inPln.Stat = "✕";
+                                        break;  // exit "number of iterations" for loop
+                                    }
+                                }
+                            }
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            ShowMessage(tsk.message, Colors.Red);
-                            logger.WriteLog(tsk.message);
-                        }
-                    }
-                    else  // if optimization
-                    {
-                        // First perform optimization
-                        ShowMessage("Optimizing plan \"" + pln.PlanId + "\".");
-                        logger.WriteLog("For patient " + pln.PatientId + ", course " + pln.CourseId + ", plan " + pln.PlanId + ", start optimization.");
-                        for (int idxRun = 1; idxRun < pln.N_Runs+1; idxRun++)
-                        {
-                            logger.WriteLog("Start optimization run no." + idxRun.ToString() + ".");
-                            tsk = plnOpt.Optimize(pln, idxRun);
-                            if (tsk.success)
-                            {
-                                ShowMessage(tsk.message);
-                                logger.WriteLog(tsk.message);
-                            }
-                            else
-                            {
-                                ShowMessage(tsk.message, Colors.Red);
-                                logger.WriteLog(tsk.message);
-                                break;  // exit then number of runs for loop
-                            }
-                        }
-                        if (tsk.success)  // if pass optimization, perform dose calc
-                        {
-                            ShowMessage("Computing dose in plan \"" + pln.PlanId + "\".");
-                            logger.WriteLog("Computing dose in plan \"" + pln.PlanId + "\".");
-                            tsk = plnOpt.ComputeDose(pln);
-                            if (tsk.success)
-                            {
-                                ShowMessage(tsk.message);
-                                logger.WriteLog(tsk.message);
-                            }
-                            else
-                            {
-                                ShowMessage(tsk.message, Colors.Red);
-                                logger.WriteLog(tsk.message);
-                            }
+                            System.Windows.MessageBox.Show(ex.ToString());
+                            ShowMessage("For row " + rowNumber + ", unexpected fault.", Colors.Red);
                         }
                     }
                 }
-                // stop the close window thread
+                dataGridPlns.Items.Refresh();
+                // Stop the close window thread
                 cts.Cancel();
-                // Close log file stream
-                logger.WriteLog("All batch process completed.");
-                logger.EndLog();
-                // Clear the list of plans
-                plnLs.PlanProperties.Clear();
-                lstvPlns.Items.Clear();
-                planLoad = false;
+                cts.Dispose();
                 ShowMessage("All batch process completed.");
-                txtbStat.Text = "Ready to load batch file.";
-            }
-            else if (!connection)
-            {
-                txtbStat.Text = "Cannot connect to database.";
+                logger.WriteLog("All batch process completed.");
+                // Close log file stream
+                logger.EndLog();
+                txtbStat.Text = "Ready.";
             }
             else
             {
-                txtbStat.Text = "No plan loaded.";
+                txtbStat.Text = "Cannot connect to database.";
             }
-        }
-        private void btnClrHist_Click(object sender, RoutedEventArgs e)
-        // Clear history list view
-        {
-            lstvHst.Items.Clear();
+            // Re-enable all buttons
+            Dispatcher.Invoke(() =>
+            {
+                dataGridPlns.IsReadOnly = false;
+                btnAddPln.IsEnabled = true;
+                btnRmvPln.IsEnabled = true;
+                btnChckPln.IsEnabled = true;
+                btnRunOpt.IsEnabled = true;
+                chkBxDoseCalcOnly.IsEnabled = true;
+            });
         }
         private void CloseWindow(object sender, CancelEventArgs e)
         // Close window routine
@@ -258,28 +347,38 @@ namespace batchOptimization
             }));
             // Make list view history update using a new thread
             lstvHst.Dispatcher.Invoke(DispatcherPriority.Background, new ThreadStart(delegate { }));
-            // Add message to status bar
-            txtbStat.Text = msg;
-            // Make status bar update using a new thread
-            txtbStat.Dispatcher.Invoke(DispatcherPriority.Background, new ThreadStart(delegate { }));
-        }
-        private void UpdatePlanLsView()
-        // Add plan names to the plan list view
-        {
-            foreach (ExtPlan pln in plnLs.PlanProperties)
-            {
-                System.Windows.Controls.ListViewItem itm = new System.Windows.Controls.ListViewItem();
-                itm.Content = pln.PatientId + ", " + pln.PlanId + ", " + pln.N_Runs.ToString() + " runs";
-                lstvPlns.Items.Add(itm);
-            }
         }
     }
-    internal class Task
+    internal class ExtPlan
+    // Plan properties
+    {
+        public string PatientId;
+        public string CourseId;
+        public string PlanId;
+        public int N_Runs;
+        public ExtPlan(PlanInput pln)
+        {
+            PatientId = pln.Pat;
+            CourseId = pln.Crs;
+            PlanId = pln.Pln;
+            N_Runs = Math.Max(pln.Iter, 1);
+        }
+    }
+    internal class PlanInput
+    // Input plan row proerties
+    {
+        public string Pat { get; set; } = "";
+        public string Crs { get; set; } = "";
+        public string Pln { get; set; } = "";
+        public int Iter { get; set; } = 1;
+        public string Stat { get; set; } = "⨁";
+    }
+    internal class RunTask
     {
         public bool success { get; set; }
         public string message { get; set; }
-        public Task() { }
-        public Task(bool scs, string msg)
+        public RunTask() { }
+        public RunTask(bool scs, string msg)
         {
             success = scs;
             message = msg;
