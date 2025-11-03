@@ -6,6 +6,8 @@
 ///     WriteLog - Write a line to the log file
 ///     EndLog - Close the log file stream
 ///
+///--version 3.0.0.1
+///Becket Hui 2025/8
 ///--version 2.0.0.1
 ///Becket Hui 2024/7
 ///--version 1.0.1.1
@@ -55,12 +57,12 @@ namespace batchOptimization
                         logFileInfo.Delete();
                     }
                 }
-                return new RunTask(true, "Log will be saved.");
+                return new RunTask(true, string.Format("Log will be saved."));
             }
             else
             {
                 dirExist = false;
-                return new RunTask(false, "Logs folder unavailable, no log will be saved.");
+                return new RunTask(false, string.Format("Logs folder unavailable, no log will be saved."));
             }            
         }
         public void StartLog(string usrId)
@@ -68,7 +70,7 @@ namespace batchOptimization
         {
             if (dirExist)
             {
-                string fileNm = DateTime.Now.ToString("yyyyMMddHHmmss") + "_" + usrId + "_log.txt";
+                string fileNm = string.Format("{0}_{1}_log.txt", DateTime.Now.ToString("yyyyMMddHHmmss"), usrId);
                 fileFullPath = Path.Combine(fileDir, fileNm);
                 try
                 {
@@ -91,7 +93,7 @@ namespace batchOptimization
         {
             if (logExist)
             {
-                logWriter.WriteLine(DateTime.Now.ToString("M/d/yy hh:mm:ss tt") + ": " + txt);
+                logWriter.WriteLine(string.Format("{0}: {1}", DateTime.Now.ToString("M/d/yy hh:mm:ss tt"), txt));
             }
         }
         public void EndLog()

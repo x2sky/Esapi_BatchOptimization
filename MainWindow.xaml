@@ -22,7 +22,7 @@
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
         <Label Grid.Column="0" Content="Plans to Optimize" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Top"/>
-        <Border Grid.Column="0" BorderBrush="Gray" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,25,0,0" Height="200" Width="400">
+        <Border Grid.Column="0" BorderBrush="Gray" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,25,10,0" Height="200" Width="420">
             <DataGrid x:Name="dataGridPlns" AutoGenerateColumns="False" CanUserAddRows="False" CanUserSortColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Patient Id" Binding="{Binding Pat}" Width="*"/>
@@ -36,8 +36,8 @@
         <Button Grid.Column="1" Name="btnAddPln" Content="Add Plan" ToolTip="Add a plan row." HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,25,0,0" Width="100" Height="30" Click="btnAddPln_Click"/>
         <Button Grid.Column="1" Name="btnRmvPln" Content="Remove Plan" ToolTip="Remove the selected plan row." HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,60,0,0" Width="100" Height="30" Click="btnRmvPln_Click"/>
         <Button Grid.Column="1" Name="btnChckPln" Content="Check Plans" ToolTip="Simple plan check for optimization." HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,95,0,0" Width="100" Height="30" Click="btnChckPln_Click"/>
-        <Label Grid.Column="1" Content="Dose Calc Only" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="38,175,0,0"/>
-        <CheckBox Grid.Column="1" Name="chkBxDoseCalcOnly" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="143,180,0,0"/>
+        <Label Grid.Column="1" Content="Dose Calc Only" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="32,175,0,0"/>
+        <CheckBox Grid.Column="1" Name="chkBxDoseCalcOnly" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="130,180,0,0"/>
         <Button Grid.Column="1" Name="btnRunOpt" Background="GreenYellow"  Content="Run Optimizations" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,200,0,0" Width="120" Height="35" Click="btnRunOpt_Click"/>
         <Label Grid.Row="1" Content="Optimization Log" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Top"/>
         <Border Grid.Row="1" Grid.ColumnSpan="2" BorderBrush="Gray" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,25,0,0" Height="90" Width="580">

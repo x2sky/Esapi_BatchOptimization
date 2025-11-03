@@ -7,6 +7,8 @@
 ///     GetOpenChildWindows - function to get all text on the selected process window
 ///     Close - close the selected process
 ///
+///--version 3.0.0.1
+///Becket Hui 2025/8
 ///--version 2.0.0.1
 ///Becket Hui 2024/7
 ///--version 1.0.1.1
